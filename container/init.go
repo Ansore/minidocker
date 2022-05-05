@@ -76,11 +76,12 @@ func pivotRoot(root string) error {
 	}
 	// create rootfs /.privot_root, save old_root
 	pivotDir := filepath.Join(root, ".pivot_root")
-	if isExists(pivotDir) {
+	if !isExists(pivotDir) {
 		if err := os.Mkdir(pivotDir, 0777); err != nil {
 			return err
 		}
 	}
+  logrus.Infof("root:%s, pivotRoot:%s", root, pivotDir)
 	// privot_root mount to new rootfs, old_root mount rootfs/.privot_root
 	if err := syscall.PivotRoot(root, pivotDir); err != nil {
     logrus.Errorf("pivotRoot Error: %v",err)

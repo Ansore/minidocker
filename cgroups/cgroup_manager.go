@@ -11,7 +11,7 @@ type CgroupManager struct {
   Resource *subsystems.ResourceConfig
 }
 
-func NewCgroupManger(path string) *CgroupManager {
+func NewCgroupManager(path string) *CgroupManager {
   return &CgroupManager{
     Path: path,
   }

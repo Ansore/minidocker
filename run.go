@@ -1,7 +1,7 @@
 package main
 
 import (
-	"minidocker/cgroups"
+	// "minidocker/cgroups"
 	"minidocker/cgroups/subsystems"
 	"minidocker/container"
 	"os"
@@ -26,10 +26,14 @@ func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig) {
   if err := parent.Start(); err != nil {
     logrus.Error(err)
   }
-  cgroupManager := cgroups.NewCgroupManger("minidocker-cgroup")
-  defer cgroupManager.Destroy()
-  cgroupManager.Set(resConf)
-  cgroupManager.Apply(parent.Process.Pid)
+  // cgroupManager := cgroups.NewCgroupManager("minidocker-cgroup")
+  // defer cgroupManager.Destroy()
+  // cgroupManager.Set(resConf)
+  // cgroupManager.Apply(parent.Process.Pid)
   sendInitCommand(cmdArr, writePipe)
   parent.Wait()
+  mntURL := "/root/mnt"
+  rootURL := "/root/"
+  container.DeleteWorkSpace(rootURL, mntURL)
+  os.Exit(0)
 }
