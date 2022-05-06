@@ -17,8 +17,8 @@ func sendInitCommand(cmdArr []string, writePipe *os.File) {
   writePipe.Close()
 }
 
-func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig) {
-  parent, writePipe := container.NewParentProcess(tty)
+func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume string) {
+  parent, writePipe := container.NewParentProcess(tty, volume)
   if parent == nil {
     logrus.Errorf("New parent process error")
     return
@@ -34,6 +34,6 @@ func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig) {
   parent.Wait()
   mntURL := "/root/mnt"
   rootURL := "/root/"
-  container.DeleteWorkSpace(rootURL, mntURL)
+  container.DeleteWorkSpace(rootURL, mntURL, volume)
   os.Exit(0)
 }
