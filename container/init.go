@@ -13,7 +13,6 @@ import (
 )
 
 func readUserCommand() []string {
-	fmt.Println("readUserCommand Start")
 	pipe := os.NewFile(uintptr(3), "pipe")
 	msg, err := ioutil.ReadAll(pipe)
 	if err != nil {
