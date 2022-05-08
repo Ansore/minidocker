@@ -10,6 +10,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type ContainerInfo struct {
+	Pid        string `json:"pid"`
+	Id         string `json:"id"`
+	Name       string `json:"name"`
+	Command    string `json:"command"`
+	CreateTime string `json:"createTime"`
+	Status     string `json:"status"`
+}
+
+var (
+	RUNNING             string = "running"
+	STOP                string = "stopped"
+	Exit                string = "exited"
+	DefaultInfoLocation string = "/var/run/minidocker/%s/"
+	ConfigName          string = "config.json"
+)
+
 func NewPipe() (*os.File, *os.File, error) {
 	read, write, err := os.Pipe()
 	if err != nil {
@@ -144,7 +161,7 @@ func DeleteWorkSpace(rootURL string, mntURL string, volume string) {
 		volumeURLs := volumeExtract(volume)
 		length := len(volumeURLs)
 		if length == 2 && volumeURLs[0] != "" && volumeURLs[1] != "" {
-      DeleteMountPointWithVolume(mntURL, volumeURLs)
+			DeleteMountPointWithVolume(mntURL, volumeURLs)
 		} else {
 			DeleteMountPoint(mntURL)
 		}
@@ -158,7 +175,7 @@ func DeleteMountPointWithVolume(mntURL string, volumeURLs []string) {
 	// 卸载容器里volume挂载点的文件系统
 	containerUrl := mntURL + volumeURLs[1]
 	if err := syscall.Unmount(containerUrl, 0); err != nil {
-    logrus.Errorf("umount %s error: %v", containerUrl, err)
+		logrus.Errorf("umount %s error: %v", containerUrl, err)
 	}
 	DeleteMountPoint(mntURL)
 }

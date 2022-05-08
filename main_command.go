@@ -45,6 +45,10 @@ var runCommand = cli.Command{
       Name: "v",
       Usage: "volume",
     },
+    cli.StringFlag{
+      Name: "name",
+      Usage: "container name",
+    },
 	},
 	Action: func(context *cli.Context) error {
 		if len(context.Args()) < 1 {
@@ -69,7 +73,8 @@ var runCommand = cli.Command{
     if createTty && detach {
       return fmt.Errorf("ti and d paramter can not both provided")
     }
-    Run(createTty, cmdArr, resConf, volume)
+    containerName := context.String("name")
+    Run(createTty, cmdArr, resConf, volume, containerName)
 		return nil
 	},
 }
@@ -87,3 +92,15 @@ var commitCommand = cli.Command {
     return nil
   },
 }
+
+var listCommand = cli.Command {
+  Name: "ps",
+  Usage: "list all the containers",
+  Action: func(context *cli.Context) error {
+    ListContainers()
+    return nil
+  },
+}
+
+
+
