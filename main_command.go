@@ -102,5 +102,17 @@ var listCommand = cli.Command {
   },
 }
 
-
+var logCommand = cli.Command {
+  Name: "logs",
+  Usage: "print logs of a container",
+  Action: func(context *cli.Context) error {
+    if len(context.Args()) < 1 {
+      return fmt.Errorf("Please input your container name")
+    }
+    containerName := context.Args().Get(0)
+    // commitContainer(containerName)
+    logContainer(containerName)
+    return nil
+  },
+}
 

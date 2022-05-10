@@ -1,6 +1,7 @@
 package container
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -25,6 +26,7 @@ var (
 	Exit                string = "exited"
 	DefaultInfoLocation string = "/var/run/minidocker/%s/"
 	ConfigName          string = "config.json"
+	ContainerLogFile    string = "container.log"
 )
 
 func NewPipe() (*os.File, *os.File, error) {
@@ -35,7 +37,7 @@ func NewPipe() (*os.File, *os.File, error) {
 	return read, write, err
 }
 
-func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, containerName string, volume string) (*exec.Cmd, *os.File) {
 	readPipe, writePipe, err := NewPipe()
 	if err != nil {
 		logrus.Errorf("New pipe error %v", err)
@@ -49,7 +51,23 @@ func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File) {
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+	} else {
+		// 生成容器对应目录的container.log文件
+		dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
+		if err := os.MkdirAll(dirURL, 0622); err != nil {
+			logrus.Errorf("NewParentProcess mkdir %s error %v", dirURL, err)
+			return nil, nil
+		}
+		stdLogFilePath := dirURL + ContainerLogFile
+    stdLogFile, err := os.Create(stdLogFilePath)
+    if err != nil {
+      logrus.Errorf("NewParentProcess create file %s error %v", stdLogFilePath, err)
+      return nil, nil
+    }
+    // 生成好的文件赋值给stdout, 这样就能把容器里的标准输出重定向到这个文件中
+    cmd.Stdout = stdLogFile
 	}
+
 	cmd.ExtraFiles = []*os.File{readPipe}
 	mntURL := "/root/mnt"
 	rootURL := "/root/"

@@ -87,7 +87,7 @@ func deleteContainerInfo(containerId string) {
 }
 
 func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume string, containerName string) {
-  parent, writePipe := container.NewParentProcess(tty, volume)
+  parent, writePipe := container.NewParentProcess(tty, containerName, volume)
   if parent == nil {
     logrus.Errorf("New parent process error")
     return
