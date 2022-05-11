@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"minidocker/cgroups/subsystems"
 	"minidocker/container"
+	"os"
 
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -12,7 +14,9 @@ var initCommand = cli.Command{
 	Name:  "init",
 	Usage: "init container process run user's process in container. Do not call it outside",
 	Action: func(context *cli.Context) error {
-    container.RunContainerInitProcess()
+    if err := container.RunContainerInitProcess(); err != nil {
+      logrus.Infof("init failed!")
+    }
 		return nil
 	},
 }
@@ -116,3 +120,27 @@ var logCommand = cli.Command {
   },
 }
 
+var execCommand = cli.Command {
+  Name: "exec",
+  Usage: "exec a command into container",
+  Action: func(context *cli.Context) error {
+    // this is for callback
+    if os.Getenv(ENV_EXEC_PID) != "" {
+      logrus.Infof("pid callback pid %d", os.Getgid())
+      return nil
+    }
+    if len(context.Args()) < 2 {
+      return fmt.Errorf("Missing container name or command")
+    }
+    containerName := context.Args().Get(0)
+    var cmdArray []string
+    // 除了容器名之外的参数作为需要执行的命令处理
+    cmdArray = append(cmdArray, context.Args().Tail()...)
+    // for _, arg := range context.Args().Tail() {
+    //   cmdArray = append(cmdArray, arg)
+    // }
+    // 执行命令
+    ExecContainer(containerName, cmdArray)
+    return nil
+  },
+}

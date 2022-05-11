@@ -52,16 +52,30 @@ func setUpMount() {
 		return
 	}
 	logrus.Infof("current location is %s", pwd)
-	pivotRoot(pwd)
+  if err := pivotRoot(pwd); err != nil {
+    logrus.Errorf("pivotRoot exec failed! %v", err)
+    return
+  }
 
 	// mount proc
 	// systemd 加入linux后 mount namespace 需要变成 shared by default
 	// 所以必须显式声明要这个新的mount namespace 独立
-	syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, "")
+  if err := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
+    logrus.Errorf("mount / failed! %v", err)
+    return
+  }
 	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
-	syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), "")
+  if err := syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), ""); err != nil {
+    logrus.Errorf("mount /proc failed! %v", err)
+    return
+  }
 
-	syscall.Mount("tmpfs", "/dev", "tmpfs", syscall.MS_NOSUID|syscall.MS_STRICTATIME, "mode=755")
+  if err := syscall.Mount("tmpfs", "/dev", "tmpfs", syscall.MS_NOSUID|syscall.MS_STRICTATIME, "mode=755"); err != nil {
+    logrus.Errorf("mount /dev failed! %v", err)
+    return
+  }
+
+  logrus.Infof("success")
 }
 
 func isExists(path string) bool {
@@ -80,7 +94,6 @@ func pivotRoot(root string) error {
 			return err
 		}
 	}
-  logrus.Infof("root:%s, pivotRoot:%s", root, pivotDir)
 	// privot_root mount to new rootfs, old_root mount rootfs/.privot_root
 	if err := syscall.PivotRoot(root, pivotDir); err != nil {
     logrus.Errorf("pivotRoot Error: %v",err)
