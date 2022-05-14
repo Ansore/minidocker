@@ -20,7 +20,7 @@ func NewCgroupManager(path string) *CgroupManager {
 // pid join the cgroup
 func (c *CgroupManager) Apply(pid int) error {
   for _, subSysIns := range(subsystems.SubsystemsIns) {
-    subSysIns.Apply(c.Path, pid)
+    return subSysIns.Apply(c.Path, pid)
   }
   return nil
 }
@@ -28,17 +28,16 @@ func (c *CgroupManager) Apply(pid int) error {
 // set cgroup rule
 func (c *CgroupManager) Set(res *subsystems.ResourceConfig) error {
   for _, subSysIns := range(subsystems.SubsystemsIns) {
-    subSysIns.Set(c.Path, res)
+    return subSysIns.Set(c.Path, res)
   }
   return nil
 }
 
 // destroy cgroup
-func (c *CgroupManager) Destroy() error {
+func (c *CgroupManager) Destroy() {
   for _, subSysIns := range(subsystems.SubsystemsIns) {
     if err := subSysIns.Remove(c.Path); err != nil {
       logrus.Warnf("remove cgroup fail %v", err)
     }
   }
-  return nil
 }

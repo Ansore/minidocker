@@ -78,8 +78,7 @@ func NewParentProcess(tty bool, containerName string, volume string) (*exec.Cmd,
 }
 
 func volumeExtract(volume string) []string {
-	var volumeURLs []string
-	volumeURLs = strings.Split(volume, ":")
+	var volumeURLs []string = strings.Split(volume, ":")
 	return volumeURLs
 }
 
@@ -129,7 +128,7 @@ func MountVolume(rootURL string, mntURL string, volumeURLs []string) {
 // 将busybox.tar解压到busybox目录,作为容器的只读层
 func CreateReadOnlyLayer(busyboxURL string, busyboxTarURL string) {
 	exist := utils.PathExists(busyboxURL)
-	if exist {
+	if !exist {
 		if err := os.Mkdir(busyboxURL, 0777); err != nil {
 			logrus.Errorf("Mkdir dir %s error. %v", busyboxURL, err)
       os.Exit(1)

@@ -26,7 +26,7 @@ func readUserCommand() []string {
 
 func RunContainerInitProcess() error {
 	cmdArr := readUserCommand()
-	if cmdArr == nil || len(cmdArr) == 0 {
+	if len(cmdArr) == 0 {
 		return fmt.Errorf("Run container get user command error, cmdArr is nil")
 	}
 
@@ -75,8 +75,6 @@ func setUpMount() {
     logrus.Errorf("mount /dev failed! %v", err)
     os.Exit(1)
   }
-
-  logrus.Infof("success")
 }
 
 func pivotRoot(newRootDir string) error {
@@ -91,7 +89,7 @@ func pivotRoot(newRootDir string) error {
 		}
 	}
 	// privot_root mount to new rootfs, old_root mount rootfs/.privot_root
-  logrus.Infof("new: %s, old: %s", newRootDir, oldRootDir)
+  // logrus.Infof("new: %s, old: %s", newRootDir, oldRootDir)
 	if err := syscall.PivotRoot(newRootDir, oldRootDir); err != nil {
     logrus.Errorf("pivotRoot Error: %v",err)
 		return fmt.Errorf("pivot_root %v", err)

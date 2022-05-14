@@ -4,5 +4,5 @@ import "os"
 
 func PathExists(path string) bool {
   _, err := os.Stat(path)
-  return os.IsExist(err)
+  return err == nil
 }
