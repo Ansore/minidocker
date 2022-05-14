@@ -2,6 +2,7 @@ package container
 
 import (
 	"fmt"
+	"minidocker/utils"
 	"os"
 	"os/exec"
 	"strings"
@@ -59,13 +60,13 @@ func NewParentProcess(tty bool, containerName string, volume string) (*exec.Cmd,
 			return nil, nil
 		}
 		stdLogFilePath := dirURL + ContainerLogFile
-    stdLogFile, err := os.Create(stdLogFilePath)
-    if err != nil {
-      logrus.Errorf("NewParentProcess create file %s error %v", stdLogFilePath, err)
-      return nil, nil
-    }
-    // 生成好的文件赋值给stdout, 这样就能把容器里的标准输出重定向到这个文件中
-    cmd.Stdout = stdLogFile
+		stdLogFile, err := os.Create(stdLogFilePath)
+		if err != nil {
+			logrus.Errorf("NewParentProcess create file %s error %v", stdLogFilePath, err)
+			return nil, nil
+		}
+		// 生成好的文件赋值给stdout, 这样就能把容器里的标准输出重定向到这个文件中
+		cmd.Stdout = stdLogFile
 	}
 
 	cmd.ExtraFiles = []*os.File{readPipe}
@@ -76,17 +77,6 @@ func NewParentProcess(tty bool, containerName string, volume string) (*exec.Cmd,
 	return cmd, writePipe
 }
 
-func PathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsExist(err) {
-		return false, err
-	}
-	return false, err
-}
-
 func volumeExtract(volume string) []string {
 	var volumeURLs []string
 	volumeURLs = strings.Split(volume, ":")
@@ -94,9 +84,13 @@ func volumeExtract(volume string) []string {
 }
 
 func NewWorkSpace(rootURL string, mntURL string, volume string) {
-	CreateReadOnlyLayer(rootURL)
-	CreateWriteLayer(rootURL)
-	CreateMountPoint(rootURL, mntURL)
+	busyboxURL := rootURL + "busybox/"
+	busyboxTarURL := rootURL + "busybox.tar"
+	writeLayerURL := rootURL + "writeLayer/"
+
+	CreateReadOnlyLayer(busyboxURL, busyboxTarURL)
+	CreateWriteLayer(writeLayerURL)
+	CreateMountPoint(writeLayerURL, busyboxURL, mntURL)
 
 	if volume != "" {
 		volumeURLs := volumeExtract(volume)
@@ -133,39 +127,47 @@ func MountVolume(rootURL string, mntURL string, volumeURLs []string) {
 }
 
 // 将busybox.tar解压到busybox目录,作为容器的只读层
-func CreateReadOnlyLayer(rootURL string) {
-	busyboxURL := rootURL + "busybox/"
-	busyboxTarURL := rootURL + "busybox.tar"
-
-	exist, err := PathExists(busyboxURL)
-	if err != nil {
-		logrus.Infof("Failed to judge whether dir %s exists. %v", busyboxURL, err)
-	}
-	if exist == false {
+func CreateReadOnlyLayer(busyboxURL string, busyboxTarURL string) {
+	exist := utils.PathExists(busyboxURL)
+	if exist {
 		if err := os.Mkdir(busyboxURL, 0777); err != nil {
 			logrus.Errorf("Mkdir dir %s error. %v", busyboxURL, err)
+      os.Exit(1)
 		}
 		if _, err := exec.Command("tar", "-xvf", busyboxTarURL, "-C", busyboxURL).CombinedOutput(); err != nil {
 			logrus.Errorf("Untar dir %s, error %v", busyboxTarURL, err)
+      os.Exit(1)
 		}
-
 	}
 }
 
 // 创建可写层
-func CreateWriteLayer(rootURL string) {
-	writeURL := rootURL + "writeLayer/"
-	if err := os.Mkdir(writeURL, 0777); err != nil {
-		logrus.Errorf("Mkdir dir %s error %v", writeURL, err)
+func CreateWriteLayer(writeLayerURL string) {
+	if utils.PathExists(writeLayerURL) {
+		os.RemoveAll(writeLayerURL)
+	}
+	if err := os.Mkdir(writeLayerURL, 0777); err != nil {
+		logrus.Errorf("Mkdir dir %s error %v", writeLayerURL, err)
 	}
 }
 
 // 创建挂载点
-func CreateMountPoint(rootURL string, mntURL string) {
+func CreateMountPoint(writeLayerURL string, busyboxURL string, mntURL string) {
+	if utils.PathExists(mntURL) {
+    res, _ := exec.Command("sh", "-c", "mount | grep", mntURL).Output()
+		if string(res) != "" {
+			if err := syscall.Unmount(mntURL, 0); err != nil {
+				logrus.Errorf("umount %s error: %v", mntURL, err)
+        DeleteWriteLayer(writeLayerURL)
+        os.Exit(1)
+			}
+		}
+		os.RemoveAll(mntURL)
+	}
 	if err := os.Mkdir(mntURL, 0777); err != nil {
 		logrus.Errorf("Mkdir dir %s error %v", mntURL, err)
 	}
-	dirs := "dirs=" + rootURL + "writeLayer:" + rootURL + "busybox"
+	dirs := "dirs=" + writeLayerURL + ":" + busyboxURL
 	cmd := exec.Command("mount", "-t", "aufs", "-o", dirs, "none", mntURL)
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
@@ -200,7 +202,7 @@ func DeleteMountPointWithVolume(mntURL string, volumeURLs []string) {
 
 func DeleteMountPoint(mntURL string) {
 	if err := syscall.Unmount(mntURL, 0); err != nil {
-		logrus.Errorf("umount mount point %v", err)
+		logrus.Errorf("umount %s error %v", mntURL, err)
 	}
 	// Even though we just unmounted the filesystem, AUFS will prevent deleting the mntpoint
 	// for some time. We'll just keep retrying until it succeeds.

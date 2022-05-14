@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+  "minidocker/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,12 +50,12 @@ func setUpMount() {
 	pwd, err := os.Getwd()
 	if err != nil {
 		logrus.Errorf("Get current location error %v", err)
-		return
+    os.Exit(1)
 	}
 	logrus.Infof("current location is %s", pwd)
   if err := pivotRoot(pwd); err != nil {
     logrus.Errorf("pivotRoot exec failed! %v", err)
-    return
+    os.Exit(1)
   }
 
 	// mount proc
@@ -62,40 +63,36 @@ func setUpMount() {
 	// 所以必须显式声明要这个新的mount namespace 独立
   if err := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
     logrus.Errorf("mount / failed! %v", err)
-    return
+    os.Exit(1)
   }
 	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
   if err := syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), ""); err != nil {
     logrus.Errorf("mount /proc failed! %v", err)
-    return
+    os.Exit(1)
   }
 
   if err := syscall.Mount("tmpfs", "/dev", "tmpfs", syscall.MS_NOSUID|syscall.MS_STRICTATIME, "mode=755"); err != nil {
     logrus.Errorf("mount /dev failed! %v", err)
-    return
+    os.Exit(1)
   }
 
   logrus.Infof("success")
 }
 
-func isExists(path string) bool {
-  _, err := os.Stat(path)
-  return os.IsExist(err)
-}
-
-func pivotRoot(root string) error {
-	if err := syscall.Mount(root, root, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+func pivotRoot(newRootDir string) error {
+	if err := syscall.Mount(newRootDir, newRootDir, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
 		return fmt.Errorf("Mount rootfs to itself error: %v", err)
 	}
-	// create rootfs /.privot_root, save old_root
-	pivotDir := filepath.Join(root, ".pivot_root")
-	if !isExists(pivotDir) {
-		if err := os.Mkdir(pivotDir, 0777); err != nil {
+	// create rootfs /.old_root, save old_root
+	oldRootDir := filepath.Join(newRootDir, ".old_root")
+	if !utils.PathExists(oldRootDir) {
+		if err := os.Mkdir(oldRootDir, 0777); err != nil {
 			return err
 		}
 	}
 	// privot_root mount to new rootfs, old_root mount rootfs/.privot_root
-	if err := syscall.PivotRoot(root, pivotDir); err != nil {
+  logrus.Infof("new: %s, old: %s", newRootDir, oldRootDir)
+	if err := syscall.PivotRoot(newRootDir, oldRootDir); err != nil {
     logrus.Errorf("pivotRoot Error: %v",err)
 		return fmt.Errorf("pivot_root %v", err)
 	}
@@ -104,11 +101,11 @@ func pivotRoot(root string) error {
 		return fmt.Errorf("Chdir / %v", err)
 	}
 
-	pivotDir = filepath.Join("/", ".privot_root")
+	oldRootDir = filepath.Join("/", ".old_root")
 	// umount rootfs/.pivot_root
-	if err := syscall.Unmount(pivotDir, syscall.MNT_DETACH); err != nil {
-		return fmt.Errorf("unmount pivot_root dir %v", err)
+	if err := syscall.Unmount(oldRootDir, syscall.MNT_DETACH); err != nil {
+		return fmt.Errorf("unmount old_root %s dir %v", oldRootDir, err)
 	}
 	// delete temp file dir
-	return os.Remove(pivotDir)
+	return os.Remove(oldRootDir)
 }
