@@ -36,7 +36,7 @@ __attribute__((constructor)) void enter_namespace(void) {
 
   for (i = 0; i < 5; i ++) {
     // 拼接对应的路径 /proc/pid/ns/ipc
-    // sprintf(nspath, "/proc/%s/ns/%s", minidocker_pid, namespaces[i]);
+    sprintf(nspath, "/proc/%s/ns/%s", minidocker_pid, namespaces[i]);
     int fd = open(nspath, O_RDONLY);
     // 调用setns系统调用进入对应的namespace
     if (setns(fd, 0) == -1) {

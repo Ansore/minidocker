@@ -9,7 +9,8 @@ import (
 	"strings"
 	"syscall"
 
-  "minidocker/utils"
+	"minidocker/utils"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,7 +28,7 @@ func readUserCommand() []string {
 func RunContainerInitProcess() error {
 	cmdArr := readUserCommand()
 	if len(cmdArr) == 0 {
-		return fmt.Errorf("Run container get user command error, cmdArr is nil")
+		return fmt.Errorf("run container get user command error, cmdArr is nil")
 	}
 
 	setUpMount()
@@ -52,7 +53,6 @@ func setUpMount() {
 		logrus.Errorf("Get current location error %v", err)
     os.Exit(1)
 	}
-	logrus.Infof("current location is %s", pwd)
   if err := pivotRoot(pwd); err != nil {
     logrus.Errorf("pivotRoot exec failed! %v", err)
     os.Exit(1)
@@ -79,7 +79,7 @@ func setUpMount() {
 
 func pivotRoot(newRootDir string) error {
 	if err := syscall.Mount(newRootDir, newRootDir, "bind", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
-		return fmt.Errorf("Mount rootfs to itself error: %v", err)
+		return fmt.Errorf("mount rootfs to itself error: %v", err)
 	}
 	// create rootfs /.old_root, save old_root
 	oldRootDir := filepath.Join(newRootDir, ".old_root")
@@ -96,7 +96,7 @@ func pivotRoot(newRootDir string) error {
 	}
 	// modify the workspace to root dir
 	if err := syscall.Chdir("/"); err != nil {
-		return fmt.Errorf("Chdir / %v", err)
+		return fmt.Errorf("chdir / %v", err)
 	}
 
 	oldRootDir = filepath.Join("/", ".old_root")

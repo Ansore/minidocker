@@ -17,7 +17,6 @@ import (
 
 func sendInitCommand(cmdArr []string, writePipe *os.File) {
 	command := strings.Join(cmdArr, " ")
-	logrus.Infof("command all is %s", command)
 	if _, err := writePipe.WriteString(command); err != nil {
 		logrus.Errorf("Write Pipe write command error %v", err)
 	}
@@ -69,6 +68,9 @@ func recordContainerInfo(containerPid int, commandArray []string, containerName 
 	fileName := dirUrl + "/" + container.ConfigName
 	// 创建最终的配置文件
 	file, err := os.Create(fileName)
+  if err != nil {
+    logrus.Errorf("create file %s error %v", fileName, err)
+  }
 	defer file.Close()
 	if err != nil {
 		logrus.Errorf("Create file %s error %v", fileName, err)

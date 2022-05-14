@@ -13,10 +13,10 @@ import (
 var initCommand = cli.Command{
 	Name:  "init",
 	Usage: "init container process run user's process in container. Do not call it outside",
-	Action: func(context *cli.Context) error {
-    if err := container.RunContainerInitProcess(); err != nil {
-      logrus.Infof("init failed!")
-    }
+	Action: func(_ *cli.Context) error {
+		if err := container.RunContainerInitProcess(); err != nil {
+			logrus.Infof("init failed!")
+		}
 		return nil
 	},
 }
@@ -33,114 +33,114 @@ var runCommand = cli.Command{
 			Name:  "d",
 			Usage: "detach container",
 		},
-    cli.StringFlag{
-      Name: "m",
-      Usage: "memory limit",
-    },
-    cli.StringFlag{
-      Name: "cpushare",
-      Usage: "cpushare limit",
-    },
-    cli.StringFlag{
-      Name: "cpuset",
-      Usage: "cpuset limit",
-    },
-    cli.StringFlag{
-      Name: "v",
-      Usage: "volume",
-    },
-    cli.StringFlag{
-      Name: "name",
-      Usage: "container name",
-    },
+		cli.StringFlag{
+			Name:  "m",
+			Usage: "memory limit",
+		},
+		cli.StringFlag{
+			Name:  "cpushare",
+			Usage: "cpushare limit",
+		},
+		cli.StringFlag{
+			Name:  "cpuset",
+			Usage: "cpuset limit",
+		},
+		cli.StringFlag{
+			Name:  "v",
+			Usage: "volume",
+		},
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "container name",
+		},
 	},
 	Action: func(context *cli.Context) error {
 		if len(context.Args()) < 1 {
-			return fmt.Errorf("Missing container command")
+			return fmt.Errorf("missing container command")
 		}
-    var cmdArr []string
-  for _, arg := range context.Args() {
-      cmdArr = append(cmdArr, arg)
-    }
-    resConf := &subsystems.ResourceConfig{
-      MemoryLimit: context.String("m"),
-      CpuSet: context.String("cpuset"),
-      CpuShare: context.String("cpushare"),
-    }
+		var cmdArr []string
+		for _, arg := range context.Args() {
+			cmdArr = append(cmdArr, arg)
+		}
+		resConf := &subsystems.ResourceConfig{
+			MemoryLimit: context.String("m"),
+			CpuSet:      context.String("cpuset"),
+			CpuShare:    context.String("cpushare"),
+		}
 
-    volume := context.String("v")
+		volume := context.String("v")
 
-    // tty 与 detach 不能共存
-    createTty := context.Bool("ti")
-    detach := context.Bool("d")
+		// tty 与 detach 不能共存
+		createTty := context.Bool("ti")
+		detach := context.Bool("d")
 
-    if createTty && detach {
-      return fmt.Errorf("ti and d paramter can not both provided")
-    }
-    containerName := context.String("name")
-    Run(createTty, cmdArr, resConf, volume, containerName)
+		if createTty && detach {
+			return fmt.Errorf("ti and d paramter can not both provided")
+		}
+		containerName := context.String("name")
+		Run(createTty, cmdArr, resConf, volume, containerName)
 		return nil
 	},
 }
 
-var commitCommand = cli.Command {
-  Name: "commit",
-  Usage: "commit a container into image",
-  Action: func(context *cli.Context) error {
-    if len(context.Args()) < 1 {
-      return fmt.Errorf("Missing container name")
-    }
-    imageName := context.Args().Get(0)
-    // commitContainer(containerName)
-    commitContainer(imageName)
-    return nil
-  },
+var commitCommand = cli.Command{
+	Name:  "commit",
+	Usage: "commit a container into image",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container name")
+		}
+		imageName := context.Args().Get(0)
+		// commitContainer(containerName)
+		commitContainer(imageName)
+		return nil
+	},
 }
 
-var listCommand = cli.Command {
-  Name: "ps",
-  Usage: "list all the containers",
-  Action: func(context *cli.Context) error {
-    ListContainers()
-    return nil
-  },
+var listCommand = cli.Command{
+	Name:  "ps",
+	Usage: "list all the containers",
+	Action: func(_ *cli.Context) error {
+		ListContainers()
+		return nil
+	},
 }
 
-var logCommand = cli.Command {
-  Name: "logs",
-  Usage: "print logs of a container",
-  Action: func(context *cli.Context) error {
-    if len(context.Args()) < 1 {
-      return fmt.Errorf("Please input your container name")
-    }
-    containerName := context.Args().Get(0)
-    // commitContainer(containerName)
-    logContainer(containerName)
-    return nil
-  },
+var logCommand = cli.Command{
+	Name:  "logs",
+	Usage: "print logs of a container",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("please input your container name")
+		}
+		containerName := context.Args().Get(0)
+		// commitContainer(containerName)
+		logContainer(containerName)
+		return nil
+	},
 }
 
-var execCommand = cli.Command {
-  Name: "exec",
-  Usage: "exec a command into container",
-  Action: func(context *cli.Context) error {
-    // this is for callback
-    if os.Getenv(ENV_EXEC_PID) != "" {
-      logrus.Infof("pid callback pid %d", os.Getgid())
-      return nil
-    }
-    if len(context.Args()) < 2 {
-      return fmt.Errorf("Missing container name or command")
-    }
-    containerName := context.Args().Get(0)
-    var cmdArray []string
-    // 除了容器名之外的参数作为需要执行的命令处理
-    cmdArray = append(cmdArray, context.Args().Tail()...)
-    // for _, arg := range context.Args().Tail() {
-    //   cmdArray = append(cmdArray, arg)
-    // }
-    // 执行命令
-    ExecContainer(containerName, cmdArray)
-    return nil
-  },
+var execCommand = cli.Command{
+	Name:  "exec",
+	Usage: "exec a command into container",
+	Action: func(context *cli.Context) error {
+		// this is for callback
+		if os.Getenv(ENV_EXEC_PID) != "" {
+			logrus.Infof("pid callback pid %d", os.Getgid())
+			return nil
+		}
+		if len(context.Args()) < 2 {
+			return fmt.Errorf("missing container name or command")
+		}
+		containerName := context.Args().Get(0)
+		var cmdArray []string
+		// 除了容器名之外的参数作为需要执行的命令处理
+		cmdArray = append(cmdArray, context.Args().Tail()...)
+		// for _, arg := range context.Args().Tail() {
+		//   cmdArray = append(cmdArray, arg)
+		// }
+		// 执行命令
+		ExecContainer(containerName, cmdArray)
+		return nil
+	},
 }

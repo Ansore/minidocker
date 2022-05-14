@@ -22,7 +22,7 @@ func main() {
     logCommand,
     execCommand,
 	}
-	app.Before = func(ctx *cli.Context) error {
+	app.Before = func(_ *cli.Context) error {
 		log.SetFormatter(&log.JSONFormatter{})
 		log.SetOutput(os.Stdout)
 		return nil

@@ -8,7 +8,9 @@ import (
 	"strconv"
 )
 
-type MemorySubSystem struct{}
+type MemorySubSystem struct {
+	used bool
+}
 
 func (s *MemorySubSystem) Name() string {
 	return "memory"
@@ -21,6 +23,7 @@ func (s *MemorySubSystem) Set(cgroupPath string, res *ResourceConfig) error {
 				[]byte(res.MemoryLimit), 0644); err != nil {
 				return fmt.Errorf("set cgroup memory failed %v", err)
 			}
+		  s.used = true
 		}
 		return nil
 	} else {
@@ -29,21 +32,26 @@ func (s *MemorySubSystem) Set(cgroupPath string, res *ResourceConfig) error {
 }
 
 func (s *MemorySubSystem) Remove(cgroupPath string) error {
-	if subsysCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, false); err == nil {
-		return os.RemoveAll(subsysCgroupPath)
-	} else {
-		return err
+	if s.used {
+		if subsysCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, false); err == nil {
+			return os.RemoveAll(subsysCgroupPath)
+		} else {
+			return err
+		}
 	}
+	return nil
 }
 
 func (s *MemorySubSystem) Apply(cgroupPath string, pid int) error {
-	if subsysCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, false); err == nil {
-		if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "tasks"),
-			[]byte(strconv.Itoa(pid)), 0644); err != nil {
-			return fmt.Errorf("set cgroup proc failed %v", err)
+	if s.used {
+		if subsysCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, false); err == nil {
+			if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "tasks"),
+				[]byte(strconv.Itoa(pid)), 0644); err != nil {
+				return fmt.Errorf("set cgroup %s proc failed %v", s.Name(), err)
+			}
+		} else {
+			return fmt.Errorf("get cgroup %s error: %v", cgroupPath, err)
 		}
-		return nil
-	} else {
-		return fmt.Errorf("get cgroup %s error: %v", cgroupPath, err)
 	}
+	return nil
 }

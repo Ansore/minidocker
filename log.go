@@ -15,6 +15,9 @@ func logContainer(containerName string) {
   logFileLocation := dirURL + container.ContainerLogFile
   // 打开日志文件
   file, err := os.Open(logFileLocation)
+  if err != nil {
+    logrus.Errorf("open log file %s error %v", logFileLocation, err)
+  }
   defer file.Close()
   if err != nil {
     logrus.Errorf("Log container open file %s error %v", logFileLocation, err)

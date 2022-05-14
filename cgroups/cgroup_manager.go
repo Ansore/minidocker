@@ -20,7 +20,9 @@ func NewCgroupManager(path string) *CgroupManager {
 // pid join the cgroup
 func (c *CgroupManager) Apply(pid int) error {
   for _, subSysIns := range(subsystems.SubsystemsIns) {
-    return subSysIns.Apply(c.Path, pid)
+    if err := subSysIns.Apply(c.Path, pid); err != nil {
+      return err
+    }
   }
   return nil
 }
@@ -28,7 +30,9 @@ func (c *CgroupManager) Apply(pid int) error {
 // set cgroup rule
 func (c *CgroupManager) Set(res *subsystems.ResourceConfig) error {
   for _, subSysIns := range(subsystems.SubsystemsIns) {
-    return subSysIns.Set(c.Path, res)
+    if err := subSysIns.Set(c.Path, res); err != nil {
+      return err
+    }
   }
   return nil
 }

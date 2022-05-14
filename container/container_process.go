@@ -78,7 +78,7 @@ func NewParentProcess(tty bool, containerName string, volume string) (*exec.Cmd,
 }
 
 func volumeExtract(volume string) []string {
-	var volumeURLs []string = strings.Split(volume, ":")
+	var volumeURLs  = strings.Split(volume, ":")
 	return volumeURLs
 }
 
@@ -95,7 +95,7 @@ func NewWorkSpace(rootURL string, mntURL string, volume string) {
 		volumeURLs := volumeExtract(volume)
 		length := len(volumeURLs)
 		if length == 2 && volumeURLs[0] != "" && volumeURLs[1] != "" {
-			MountVolume(rootURL, mntURL, volumeURLs)
+			MountVolume(mntURL, volumeURLs)
 			logrus.Infof("volume mounted: %q", volumeURLs)
 		} else {
 			logrus.Infof("volume parameter input is not correct.")
@@ -103,7 +103,7 @@ func NewWorkSpace(rootURL string, mntURL string, volume string) {
 	}
 }
 
-func MountVolume(rootURL string, mntURL string, volumeURLs []string) {
+func MountVolume(mntURL string, volumeURLs []string) {
 	// 创建宿主机文件目录
 	parentUrl := volumeURLs[0]
 	if err := os.Mkdir(parentUrl, 0777); err != nil {
