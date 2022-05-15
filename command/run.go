@@ -33,7 +33,7 @@ func randStringBytes(n int) string {
 	return string(b)
 }
 
-func recordContainerInfo(containerPid int, commandArray []string, containerName string) (string, error) {
+func recordContainerInfo(containerPid int, commandArray []string, containerName string, volume string) (string, error) {
 	// 生成10位数字的容器ID
 	id := randStringBytes(10)
 	// 以当前时间为容器创建时间
@@ -50,6 +50,7 @@ func recordContainerInfo(containerPid int, commandArray []string, containerName 
 		CreateTime: createTime,
 		Status:     container.RUNNING,
 		Name:       containerName,
+		Volume:     volume,
 	}
 
 	// 将容器信息序列化成字符串
@@ -68,9 +69,9 @@ func recordContainerInfo(containerPid int, commandArray []string, containerName 
 	fileName := dirUrl + "/" + container.ConfigName
 	// 创建最终的配置文件
 	file, err := os.Create(fileName)
-  if err != nil {
-    logrus.Errorf("create file %s error %v", fileName, err)
-  }
+	if err != nil {
+		logrus.Errorf("create file %s error %v", fileName, err)
+	}
 	defer file.Close()
 	if err != nil {
 		logrus.Errorf("Create file %s error %v", fileName, err)
@@ -90,8 +91,8 @@ func deleteContainerInfo(containerId string) {
 	}
 }
 
-func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume string, containerName string) {
-	childProcess, writePipe := container.NewParentProcess(tty, containerName, volume)
+func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume string, containerName string, imageName string) {
+	childProcess, writePipe := container.NewParentProcess(tty, containerName, volume, imageName)
 	if childProcess == nil {
 		logrus.Errorf("New parent process error")
 		return
@@ -99,7 +100,7 @@ func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume s
 	if err := childProcess.Start(); err != nil {
 		logrus.Error(err)
 	}
-	containerName, err := recordContainerInfo(childProcess.Process.Pid, cmdArr, containerName)
+	containerName, err := recordContainerInfo(childProcess.Process.Pid, cmdArr, containerName, volume)
 	if err != nil {
 		logrus.Errorf("Record container info error %v", err)
 		return
@@ -118,9 +119,7 @@ func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume s
 		if err := childProcess.Wait(); err != nil {
 			logrus.Errorf("parent Wait error %v", err)
 		}
-		mntURL := "/root/mnt"
-		rootURL := "/root/"
-		container.DeleteWorkSpace(rootURL, mntURL, volume)
+		container.DeleteWorkSpace(volume, containerName)
 		deleteContainerInfo(containerName)
 	}
 	os.Exit(0)

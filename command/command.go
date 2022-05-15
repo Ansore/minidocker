@@ -68,6 +68,8 @@ var RunCommand = cli.Command{
 			CpuShare:    context.String("cpushare"),
 		}
 
+    imageName := cmdArr[0]
+    cmdArr = cmdArr[1:]
 		volume := context.String("v")
 
 		// tty 与 detach 不能共存
@@ -78,7 +80,7 @@ var RunCommand = cli.Command{
 			return fmt.Errorf("ti and d paramter can not both provided")
 		}
 		containerName := context.String("name")
-		Run(createTty, cmdArr, resConf, volume, containerName)
+		Run(createTty, cmdArr, resConf, volume, containerName, imageName)
 		return nil
 	},
 }
@@ -87,12 +89,13 @@ var CommitCommand = cli.Command{
 	Name:  "commit",
 	Usage: "commit a container into image",
 	Action: func(context *cli.Context) error {
-		if len(context.Args()) < 1 {
-			return fmt.Errorf("missing container name")
+		if len(context.Args()) < 2 {
+			return fmt.Errorf("missing container name and image name")
 		}
-		imageName := context.Args().Get(0)
+		containerName := context.Args().Get(0)
+    imageName := context.Args().Get(1)
 		// commitContainer(containerName)
-		commitContainer(imageName)
+		commitContainer(containerName, imageName)
 		return nil
 	},
 }
