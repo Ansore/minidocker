@@ -17,6 +17,18 @@ import (
 const ENV_EXEC_PID = "minidocker_pid"
 const ENV_EXEC_CMD = "minidocker_command"
 
+func getEnvsByPid(pid string) []string {
+  // 进程的环境变量获取地址 /proc/xx/environ
+  path := fmt.Sprintf("/proc/%s/environ", pid)
+  contentBytes, err := ioutil.ReadFile(path)
+  if err != nil {
+    logrus.Errorf("ReadFile %s error %v", path, err)
+    return nil
+  }
+  envs := strings.Split(string(contentBytes), "\u0000")
+  return envs
+}
+
 func getContainerPidByName(containerName string) (string, error) {
 	dirURL := fmt.Sprintf(container.DefaultInfoLocation, containerName)
 	configFilePath := dirURL + container.ConfigName
@@ -48,6 +60,11 @@ func ExecContainer(containerName string, comArray []string) {
 
 	os.Setenv(ENV_EXEC_PID, pid)
 	os.Setenv(ENV_EXEC_CMD, cmdStr)
+
+  // 获取环境变量
+  containerEnvs := getEnvsByPid(pid)
+  // 设置环境变量
+  cmd.Env = append(os.Environ(), containerEnvs...)
 
 	if err := cmd.Run(); err != nil {
 		logrus.Errorf("Exec container %s error %v", containerName, err)

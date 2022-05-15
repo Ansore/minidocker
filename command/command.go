@@ -33,6 +33,10 @@ var RunCommand = cli.Command{
 			Name:  "d",
 			Usage: "detach container",
 		},
+		cli.StringSliceFlag{
+			Name:  "e",
+			Usage: "set environment",
+		},
 		cli.StringFlag{
 			Name:  "m",
 			Usage: "memory limit",
@@ -76,11 +80,15 @@ var RunCommand = cli.Command{
 		createTty := context.Bool("ti")
 		detach := context.Bool("d")
 
+    // environment
+    envSilice := context.StringSlice("e")
+    logrus.Infof("%s", envSilice[0])
+
 		if createTty && detach {
 			return fmt.Errorf("ti and d paramter can not both provided")
 		}
 		containerName := context.String("name")
-		Run(createTty, cmdArr, resConf, volume, containerName, imageName)
+		Run(createTty, cmdArr, resConf, volume, containerName, imageName, envSilice)
 		return nil
 	},
 }
@@ -133,7 +141,7 @@ var ExecCommand = cli.Command{
 			return nil
 		}
 		if len(context.Args()) < 2 {
-			return fmt.Errorf("missing container name or command")
+			return fmt.Errorf("exec missing container name or command")
 		}
 		containerName := context.Args().Get(0)
 		var cmdArray []string

@@ -91,8 +91,8 @@ func deleteContainerInfo(containerId string) {
 	}
 }
 
-func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume string, containerName string, imageName string) {
-	childProcess, writePipe := container.NewParentProcess(tty, containerName, volume, imageName)
+func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume string, containerName string, imageName string, envSlice []string) {
+	childProcess, writePipe := container.NewParentProcess(tty, containerName, volume, imageName, envSlice)
 	if childProcess == nil {
 		logrus.Errorf("New parent process error")
 		return

@@ -40,7 +40,7 @@ func NewPipe() (*os.File, *os.File, error) {
 	return read, write, err
 }
 
-func NewParentProcess(tty bool, containerName string, volume string, imageName string) (*exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, containerName string, volume string, imageName string, envSlice []string) (*exec.Cmd, *os.File) {
 	readPipe, writePipe, err := NewPipe()
 	if err != nil {
 		logrus.Errorf("New pipe error %v", err)
@@ -72,6 +72,7 @@ func NewParentProcess(tty bool, containerName string, volume string, imageName s
 	}
 
 	cmd.ExtraFiles = []*os.File{readPipe}
+  cmd.Env = append(os.Environ(), envSlice...)
 	NewWorkSpace(volume, containerName, imageName)
 	cmd.Dir = fmt.Sprintf(MntUrl, containerName)
 	return cmd, writePipe
