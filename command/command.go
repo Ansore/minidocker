@@ -1,4 +1,4 @@
-package main
+package command
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var initCommand = cli.Command{
+var InitCommand = cli.Command{
 	Name:  "init",
 	Usage: "init container process run user's process in container. Do not call it outside",
 	Action: func(_ *cli.Context) error {
@@ -21,7 +21,7 @@ var initCommand = cli.Command{
 	},
 }
 
-var runCommand = cli.Command{
+var RunCommand = cli.Command{
 	Name:  "run",
 	Usage: "create a container with namespace and cgroups limit. minidocker run -it [command]",
 	Flags: []cli.Flag{
@@ -83,7 +83,7 @@ var runCommand = cli.Command{
 	},
 }
 
-var commitCommand = cli.Command{
+var CommitCommand = cli.Command{
 	Name:  "commit",
 	Usage: "commit a container into image",
 	Action: func(context *cli.Context) error {
@@ -97,7 +97,7 @@ var commitCommand = cli.Command{
 	},
 }
 
-var listCommand = cli.Command{
+var ListCommand = cli.Command{
 	Name:  "ps",
 	Usage: "list all the containers",
 	Action: func(_ *cli.Context) error {
@@ -106,7 +106,7 @@ var listCommand = cli.Command{
 	},
 }
 
-var logCommand = cli.Command{
+var LogCommand = cli.Command{
 	Name:  "logs",
 	Usage: "print logs of a container",
 	Action: func(context *cli.Context) error {
@@ -120,7 +120,7 @@ var logCommand = cli.Command{
 	},
 }
 
-var execCommand = cli.Command{
+var ExecCommand = cli.Command{
 	Name:  "exec",
 	Usage: "exec a command into container",
 	Action: func(context *cli.Context) error {
@@ -136,11 +136,21 @@ var execCommand = cli.Command{
 		var cmdArray []string
 		// 除了容器名之外的参数作为需要执行的命令处理
 		cmdArray = append(cmdArray, context.Args().Tail()...)
-		// for _, arg := range context.Args().Tail() {
-		//   cmdArray = append(cmdArray, arg)
-		// }
 		// 执行命令
 		ExecContainer(containerName, cmdArray)
+		return nil
+	},
+}
+
+var StopCommand = cli.Command {
+	Name:  "stop",
+	Usage: "stop a container",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container name")
+		}
+    containerName := context.Args().Get(0)
+    stopContainer(containerName)
 		return nil
 	},
 }

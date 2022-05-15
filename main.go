@@ -1,6 +1,7 @@
 package main
 
 import (
+	cmd "minidocker/command"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -15,12 +16,13 @@ func main() {
 	app.Usage = usage
 
 	app.Commands = []cli.Command{
-		initCommand,
-    runCommand,
-    commitCommand,
-    listCommand,
-    logCommand,
-    execCommand,
+		cmd.InitCommand,
+    cmd.RunCommand,
+    cmd.CommitCommand,
+    cmd.ListCommand,
+    cmd.LogCommand,
+    cmd.ExecCommand,
+    cmd.StopCommand,
 	}
 	app.Before = func(_ *cli.Context) error {
 		log.SetFormatter(&log.JSONFormatter{})
