@@ -28,7 +28,7 @@ func createBridgeInterface(bridgeName string) error {
 	la := netlink.NewLinkAttrs()
 	la.Name = bridgeName
 
-	br := &netlink.Bridge{la}
+	br := &netlink.Bridge{LinkAttrs: la}
 	if err := netlink.LinkAdd(br); err != nil {
 		return fmt.Errorf("bridge creation failed for bridge %s: %v", bridgeName, err)
 	}
@@ -62,13 +62,22 @@ func setInterfaceIP(name string, rawIP string) error {
 		time.Sleep(2 * time.Second)
 	}
 	if err != nil {
-		return fmt.Errorf("Abandoning retrieving the new bridge link from netlink, Run [ ip link ] to troubleshoot the error: %v", err)
+		return fmt.Errorf("abandoning retrieving the new bridge link from netlink, Run [ ip link ] to troubleshoot the error: %v", err)
 	}
 	ipNet, err := netlink.ParseIPNet(rawIP)
 	if err != nil {
 		return err
 	}
-	addr := &netlink.Addr{ipNet, "", 0, 0, nil, nil, 0, 0}
+	addr := &netlink.Addr{
+		IPNet:       ipNet,
+		Label:       "",
+		Flags:       0,
+		Scope:       0,
+		Peer:        &net.IPNet{},
+		Broadcast:   []byte{},
+		PreferedLft: 0,
+		ValidLft:    0,
+	}
 	return netlink.AddrAdd(iface, addr)
 }
 
@@ -94,7 +103,7 @@ func (d *BridgeNetworkDriver) initBridge(n *Network) error {
 	gatewayIP.IP = n.IpRange.IP
 
 	if err := setInterfaceIP(bridgeName, gatewayIP.String()); err != nil {
-		return fmt.Errorf("error assigning address: %s on bridge: %s with an eror of: %v")
+		return fmt.Errorf("error assigning address: %s on bridge: %s with an eror of: %v", gatewayIP, bridgeName, err)
 	}
 
 	if err := setInterfaceUP(bridgeName); err != nil {
@@ -153,11 +162,11 @@ func (d *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) erro
 	}
 
 	if err = netlink.LinkAdd(&endpoint.Device); err != nil {
-		return fmt.Errorf("Error Add Endpoint Device: %v", err)
+		return fmt.Errorf("error Add Endpoint Device: %v", err)
 	}
 
 	if err = netlink.LinkSetUp(&endpoint.Device); err != nil {
-		return fmt.Errorf("Error Add Endpoint Device: %v", err)
+		return fmt.Errorf("error Add Endpoint Device: %v", err)
 	}
 	return nil
 }
