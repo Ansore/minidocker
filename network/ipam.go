@@ -51,9 +51,9 @@ func (ipam *IPAM) dump() error {
 	ipamConfigFileDir, _ := path.Split(ipam.SubnetAllocatorPath)
 	if _, err := os.Stat(ipamConfigFileDir); err != nil {
 		if os.IsNotExist(err) {
-      if err := os.MkdirAll(ipamConfigFileDir, 0644); err != nil {
-        return err
-      }
+			if err := os.MkdirAll(ipamConfigFileDir, 0644); err != nil {
+				return err
+			}
 		} else {
 			return err
 		}
@@ -107,9 +107,9 @@ func (ipam *IPAM) Allocate(subnet *net.IPNet) (ip net.IP, err error) {
 			break
 		}
 	}
-  if err := ipam.dump(); err != nil {
-    logrus.Errorf("ipam dump error %v", err)
-  }
+	if err := ipam.dump(); err != nil {
+		logrus.Errorf("ipam dump error %v", err)
+	}
 	return
 }
 
@@ -130,11 +130,11 @@ func (ipam *IPAM) Release(subnet *net.IPNet, ipaddr *net.IP) error {
 	}
 
 	ipalloc := []byte((*ipam.Subnets)[subnet.String()])
-  ipalloc[c] = '0'
-  (*ipam.Subnets)[subnet.String()] = string(ipalloc)
+	ipalloc[c] = '0'
+	(*ipam.Subnets)[subnet.String()] = string(ipalloc)
 
-  if err := ipam.dump(); err != nil {
-    return err
-  }
-  return nil
+	if err := ipam.dump(); err != nil {
+		return err
+	}
+	return nil
 }
