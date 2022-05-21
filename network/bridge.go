@@ -73,10 +73,6 @@ func setInterfaceIP(name string, rawIP string) error {
 		Label:       "",
 		Flags:       0,
 		Scope:       0,
-		Peer:        &net.IPNet{},
-		Broadcast:   []byte{},
-		PreferedLft: 0,
-		ValidLft:    0,
 	}
 	return netlink.AddrAdd(iface, addr)
 }
