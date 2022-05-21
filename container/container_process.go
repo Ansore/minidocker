@@ -17,6 +17,7 @@ type ContainerInfo struct {
 	CreateTime string `json:"createTime"`
 	Status     string `json:"status"`
 	Volume     string `json:"volume"`
+  PortMapping []string `json:"portmapping"`
 }
 
 var (

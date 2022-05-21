@@ -133,7 +133,7 @@ func Init() error {
 			return err
 		}
 	}
-	filepath.Walk(defaultNetworkPath, func(nwPath string, _ fs.FileInfo, _ error) error {
+  if err := filepath.Walk(defaultNetworkPath, func(nwPath string, _ fs.FileInfo, _ error) error {
 		if strings.HasSuffix(nwPath, "/") {
 			return nil
 		}
@@ -147,7 +147,9 @@ func Init() error {
 
 		networks[nwName] = nw
 		return nil
-	})
+	}); err != nil {
+    return err
+  }
 	return nil
 }
 
@@ -220,7 +222,9 @@ func enterContainerNetns(enLink *netlink.Link, cinfo *container.ContainerInfo) f
 	}
 
 	return func() {
-		netns.Set(origin)
+    if err := netns.Set(origin); err != nil {
+      logrus.Errorf("netns set error %v", err)
+    }
 		origin.Close()
 		runtime.UnlockOSThread()
 		f.Close()
