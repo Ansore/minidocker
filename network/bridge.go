@@ -18,29 +18,39 @@ func (d *BridgeNetworkDriver) Name() string {
 	return "bridge"
 }
 
+// create linux bridge device
 func createBridgeInterface(bridgeName string) error {
+  // 检查是否存在同名设备
 	_, err := net.InterfaceByName(bridgeName)
+  // 如果已存在,返回错误
 	if err == nil || !strings.Contains(err.Error(), "no such network interface") {
 		return err
 	}
 
 	// create *netlink.Bridge object
+  // 初始化一个netlink的link基础对象,link的名字即bridge虚拟设备的名字
 	la := netlink.NewLinkAttrs()
 	la.Name = bridgeName
 
+  // 使用刚才创建的link的属性创建netlink的bridge对象
 	br := &netlink.Bridge{LinkAttrs: la}
+  // 调用netlink的linkadd方法,创建bridge虚拟网络设备
+  // 相当于 ip link add xxx
 	if err := netlink.LinkAdd(br); err != nil {
 		return fmt.Errorf("bridge creation failed for bridge %s: %v", bridgeName, err)
 	}
 	return nil
 }
 
+// 设置网络接口位UP状态
 func setInterfaceUP(interfaceName string) error {
 	iface, err := netlink.LinkByName(interfaceName)
 	if err != nil {
 		return fmt.Errorf("error retrieving a link named [ %s ]: %v", iface.Attrs().Name, err)
 	}
 
+  // 通过netlink的LinkSetUp接口将状态设置为up
+  // 相当于 ip link set xxx up
 	if err := netlink.LinkSetUp(iface); err != nil {
 		return fmt.Errorf("error enabling interface for %s: %v", interfaceName, err)
 	}
@@ -54,6 +64,7 @@ func setInterfaceIP(name string, rawIP string) error {
 	var err error
 
 	for i := 0; i < retries; i++ {
+    // 通过netlink的LinkByName方法找到需要设置的网络接口
 		iface, err = netlink.LinkByName(name)
 		if err == nil {
 			break
@@ -64,6 +75,7 @@ func setInterfaceIP(name string, rawIP string) error {
 	if err != nil {
 		return fmt.Errorf("abandoning retrieving the new bridge link from netlink, Run [ ip link ] to troubleshoot the error: %v", err)
 	}
+  // ipnet包含网段的信息和原始IP
 	ipNet, err := netlink.ParseIPNet(rawIP)
 	if err != nil {
 		return err
@@ -74,12 +86,19 @@ func setInterfaceIP(name string, rawIP string) error {
 		Flags:       0,
 		Scope:       0,
 	}
+  // AddrAdd相当于 ip addr add xxx
+  // 如果配置了地址所在的网段的信息,如192.168.0.0/24
+  // 还会配置路由表192.168.0.0/24转发到这个testbridge的网络接口上
 	return netlink.AddrAdd(iface, addr)
 }
 
+// 设置iptables对应的bridge的MASQUERADE规则
 func setupIPTables(bridgeName string, subnet *net.IPNet) error {
+  // 创建iptables命令
+  // iptables -t nat -A POSTROUTING -s <bridgeName> ! -o <bridgeName> -j MASQUERADE
 	iptablesCmd := fmt.Sprintf("-t nat -A POSTROUTING -s %s ! -o %s -j MASQUERADE", subnet.String(), bridgeName)
 	cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
+  // 执行iptables命令配置SNAT规则
 	output, err := cmd.Output()
 	if err != nil {
 		logrus.Errorf("iptables output, %v", output)
@@ -87,6 +106,8 @@ func setupIPTables(bridgeName string, subnet *net.IPNet) error {
 	return err
 }
 
+// 初始化Bridge
+// 初始化bridge虚拟设备->设置bridge设备的地址和路由->启动bridge->设置iptables SNAT规则
 func (d *BridgeNetworkDriver) initBridge(n *Network) error {
 	// try to get bridge by name, if it already exists then just exit
 	bridgeName := n.Name
@@ -94,7 +115,7 @@ func (d *BridgeNetworkDriver) initBridge(n *Network) error {
 		return fmt.Errorf("error add bridge: %s, error: %v", bridgeName, err)
 	}
 
-	// set bridge IP
+	// set bridge IP and router
 	gatewayIP := *n.IpRange
 	gatewayIP.IP = n.IpRange.IP
 
@@ -102,6 +123,7 @@ func (d *BridgeNetworkDriver) initBridge(n *Network) error {
 		return fmt.Errorf("error assigning address: %s on bridge: %s with an eror of: %v", gatewayIP, bridgeName, err)
 	}
 
+  // start bridge dev
 	if err := setInterfaceUP(bridgeName); err != nil {
 		return fmt.Errorf("error set bridge up: %s, error: %v", bridgeName, err)
 	}
@@ -114,8 +136,10 @@ func (d *BridgeNetworkDriver) initBridge(n *Network) error {
 }
 
 func (d *BridgeNetworkDriver) Create(subnet string, name string) (*Network, error) {
+  // 获取网段字符串中的网关IP地址和网络的IP段
 	ip, ipRange, _ := net.ParseCIDR(subnet)
 	ipRange.IP = ip
+  // 初始化网络对象
 	n := &Network{
 		Name:    name,
 		IpRange: ipRange,
@@ -125,15 +149,19 @@ func (d *BridgeNetworkDriver) Create(subnet string, name string) (*Network, erro
 	if err != nil {
 		logrus.Errorf("error init bridge: %v", err)
 	}
+  // 返回配置好的网络
 	return n, err
 }
 
 func (d *BridgeNetworkDriver) Delete(network Network) error {
+  // 网络名即linux bridge设备名
 	bridgeName := network.Name
+  // 通过netlink的LinkByName获取对应的设备
 	br, err := netlink.LinkByName(bridgeName)
 	if err != nil {
 		return err
 	}
+  // 删除linux bridge设备
 	return netlink.LinkDel(br)
 }
 
