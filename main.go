@@ -17,20 +17,21 @@ func main() {
 
 	app.Commands = []cli.Command{
 		cmd.InitCommand,
-    cmd.RunCommand,
-    cmd.CommitCommand,
-    cmd.ListCommand,
-    cmd.LogCommand,
-    cmd.ExecCommand,
-    cmd.StopCommand,
-    cmd.RemoveCommand,
+		cmd.RunCommand,
+		cmd.CommitCommand,
+		cmd.ListCommand,
+		cmd.LogCommand,
+		cmd.ExecCommand,
+		cmd.StopCommand,
+		cmd.RemoveCommand,
+		cmd.NetworkCommand,
 	}
 	app.Before = func(_ *cli.Context) error {
 		log.SetFormatter(&log.JSONFormatter{})
 		log.SetOutput(os.Stdout)
 		return nil
 	}
-  if err := app.Run(os.Args); err != nil {
-    log.Fatal(err)
-  }
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
 }

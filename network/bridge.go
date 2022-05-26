@@ -170,25 +170,37 @@ func (d *BridgeNetworkDriver) Disconnect(network Network, endpoint *Endpoint) er
 }
 
 func (d *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) error {
+  // 获取linux bridge的接口名
 	bridgeName := network.Name
+  // 通过接口名获取到Linux bridge接口的对象和属性
 	br, err := netlink.LinkByName(bridgeName)
 	if err != nil {
 		return err
 	}
 
+  // 创建veth属性
 	la := netlink.NewLinkAttrs()
+  // 由于Linux接口名限制，名字取endpoint id的前5位
 	la.Name = endpoint.ID[:5]
+  // 通过设置veth接口的master属性,设置这个veth的一端挂载到网络对应的linux bridge上
 	la.MasterIndex = br.Attrs().Index
 
+  // 创建veth对象,通过PeerName配置veth另一端的接口名
+  // 配置veth另一端的名字cif-{endpoint ID的前5位}
 	endpoint.Device = netlink.Veth{
 		LinkAttrs: la,
 		PeerName:  "cif-" + endpoint.ID[:5],
 	}
 
+  // 调用netlink的linkadd方法创建这个veth接口
+  // 上面指定了link的MasterIndex是网络对应的linux bridge
+  // 所以veth另一端就已经挂载到了网络对应的linux bridge上
 	if err = netlink.LinkAdd(&endpoint.Device); err != nil {
 		return fmt.Errorf("error Add Endpoint Device: %v", err)
 	}
 
+  // 调用netlink的LinkSetUp方法,设置veth启动
+  // 相当于ip link set xxx up命令
 	if err = netlink.LinkSetUp(&endpoint.Device); err != nil {
 		return fmt.Errorf("error Add Endpoint Device: %v", err)
 	}
