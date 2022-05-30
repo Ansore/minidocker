@@ -142,7 +142,9 @@ func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume s
 		}
 		container.DeleteWorkSpace(volume, containerName)
 		deleteContainerInfo(containerName)
-		network.Disconnect(nw, containerInfo)
+    if err := network.Disconnect(nw, containerInfo); err != nil {
+      logrus.Errorf("network Disconnect failed %v", err)
+    }
 	}
 	os.Exit(0)
 }
