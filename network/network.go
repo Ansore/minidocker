@@ -46,16 +46,6 @@ type Network struct {
 	Driver  string     // 网络驱动名
 }
 
-// 网络端点
-type Endpoint struct {
-	ID          string           `json:"id"`
-	Device      netlink.Veth     `json:"dev"`
-	IPAddress   net.IP           `json:"ip"`
-	MacAddress  net.HardwareAddr `json:"mac"`
-	Network     *Network
-	PortMapping []string
-}
-
 func (nw *Network) dump(dumpPath string) error {
 	// 检查保存目录是否存在,不存在则创建
 	if _, err := os.Stat(dumpPath); err != nil {
@@ -123,7 +113,7 @@ func (nw *Network) load(dumpPath string) error {
 	}
 
 	// json字符串反序列换出网络配置
-	err = json.Unmarshal(nwJson[:n], err)
+	err = json.Unmarshal(nwJson[:n], nw)
 	if err != nil {
 		logrus.Errorf("Error load nw info %v", err)
 		return err
@@ -147,6 +137,7 @@ func Init() error {
 		}
 	}
 	// 检查网络配置目录中的所有文件
+	// network
 	if err := filepath.Walk(defaultNetworkPath, func(nwPath string, _ fs.FileInfo, _ error) error {
 		// 如果是目录则跳过
 		if strings.HasSuffix(nwPath, "/") {
@@ -157,17 +148,40 @@ func Init() error {
 		nw := &Network{
 			Name: nwName,
 		}
-    // 加载网络配置信息
+		// 加载网络配置信息
 		if err := nw.load(nwPath); err != nil {
 			logrus.Errorf("error load network: %s", err)
 		}
 
-    // 将网络配置信息加入到networks字典中
+		// 将网络配置信息加入到networks字典中
 		networks[nwName] = nw
 		return nil
 	}); err != nil {
 		return err
 	}
+	// endpoints
+	if err := filepath.Walk(defaultEndpointPath, func(epPath string, _ fs.FileInfo, _ error) error {
+		// 如果是目录则跳过
+		if strings.HasSuffix(epPath, "/") {
+			return nil
+		}
+		// 加载文件名作为网络名
+		_, epId := path.Split(epPath)
+		ep := &Endpoint{
+			ID: epId,
+		}
+		// 加载网络配置信息
+		if err := ep.load(epPath); err != nil {
+			logrus.Errorf("error load network: %s", err)
+		}
+
+		// 将网络配置信息加入到networks字典中
+		endpoints[epId] = ep
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -205,20 +219,20 @@ func ListNetwork() {
 
 // 删除网络
 func DeleteNetwork(networkName string) error {
-  // 检查网络是否存在
+	// 检查网络是否存在
 	nw, ok := networks[networkName]
 	if !ok {
 		return fmt.Errorf("no such network: %s", networkName)
 	}
-  // 调用IPAM的实例释放ipAllocator网络网关的IP
+	// 调用IPAM的实例释放ipAllocator网络网关的IP
 	if err := ipAllocator.Release(nw.IpRange, &nw.IpRange.IP); err != nil {
 		return fmt.Errorf("error remove network gateway ip: %s", err)
 	}
-  // 调用驱动删除网络
+	// 调用驱动删除网络
 	if err := drivers[nw.Driver].Delete(*nw); err != nil {
 		return fmt.Errorf("error remove network driver error %v", err)
 	}
-  // 从网络配置目录中删除该网络对应的配置文件
+	// 从网络配置目录中删除该网络对应的配置文件
 	return nw.remove(defaultNetworkPath)
 }
 
@@ -332,12 +346,27 @@ func Connect(networkName string, cinfo *container.ContainerInfo) error {
 	}
 	// 到容器的namespace配置容器的网络设备IP地址
 	if err = configEndpointIpAddressAndRoute(ep, cinfo); err != nil {
-		return nil
+		return err
 	}
+	endpoints[ep.ID] = ep
 	// 配置容器到宿主机的映射
 	return configPortMapping(ep, cinfo)
 }
 
 func Disconnect(networkName string, cinfo *container.ContainerInfo) error {
+	// 检查网络是否存在
+	nw, ok := networks[networkName]
+	if !ok {
+		return fmt.Errorf("no such network: %s", networkName)
+	}
+	epId := fmt.Sprintf("%s-%s", cinfo.Id, networkName)
+	ep, ok := endpoints[epId]
+	if !ok {
+		return fmt.Errorf("no such endpoint: %s", networkName)
+	}
+	// 调用IPAM的实例释放ipAllocator网络网关的IP
+	if err := ipAllocator.Release(nw.IpRange, &ep.IPAddress); err != nil {
+		return fmt.Errorf("error remove network gateway ip: %s", err)
+	}
 	return nil
 }

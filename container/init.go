@@ -51,30 +51,30 @@ func setUpMount() {
 	pwd, err := os.Getwd()
 	if err != nil {
 		logrus.Errorf("Get current location error %v", err)
-    os.Exit(1)
+		os.Exit(1)
 	}
-  if err := pivotRoot(pwd); err != nil {
-    logrus.Errorf("pivotRoot exec failed! %v", err)
-    os.Exit(1)
-  }
+	if err := pivotRoot(pwd); err != nil {
+		logrus.Errorf("pivotRoot exec failed! %v", err)
+		os.Exit(1)
+	}
 
 	// mount proc
 	// systemd 加入linux后 mount namespace 需要变成 shared by default
 	// 所以必须显式声明要这个新的mount namespace 独立
-  if err := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
-    logrus.Errorf("mount / failed! %v", err)
-    os.Exit(1)
-  }
+	if err := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
+		logrus.Errorf("mount / failed! %v", err)
+		os.Exit(1)
+	}
 	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
-  if err := syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), ""); err != nil {
-    logrus.Errorf("mount /proc failed! %v", err)
-    os.Exit(1)
-  }
+	if err := syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), ""); err != nil {
+		logrus.Errorf("mount /proc failed! %v", err)
+		os.Exit(1)
+	}
 
-  if err := syscall.Mount("tmpfs", "/dev", "tmpfs", syscall.MS_NOSUID|syscall.MS_STRICTATIME, "mode=755"); err != nil {
-    logrus.Errorf("mount /dev failed! %v", err)
-    os.Exit(1)
-  }
+	if err := syscall.Mount("tmpfs", "/dev", "tmpfs", syscall.MS_NOSUID|syscall.MS_STRICTATIME, "mode=755"); err != nil {
+		logrus.Errorf("mount /dev failed! %v", err)
+		os.Exit(1)
+	}
 }
 
 func pivotRoot(newRootDir string) error {
@@ -89,9 +89,9 @@ func pivotRoot(newRootDir string) error {
 		}
 	}
 	// privot_root mount to new rootfs, old_root mount rootfs/.privot_root
-  // logrus.Infof("new: %s, old: %s", newRootDir, oldRootDir)
+	// logrus.Infof("new: %s, old: %s", newRootDir, oldRootDir)
 	if err := syscall.PivotRoot(newRootDir, oldRootDir); err != nil {
-    logrus.Errorf("pivotRoot Error: %v",err)
+		logrus.Errorf("pivotRoot Error: %v", err)
 		return fmt.Errorf("pivot_root %v", err)
 	}
 	// modify the workspace to root dir

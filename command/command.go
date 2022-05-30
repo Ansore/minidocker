@@ -58,6 +58,14 @@ var RunCommand = cli.Command{
 			Name:  "name",
 			Usage: "container name",
 		},
+    cli.StringFlag{
+      Name: "net",
+      Usage: "container network",
+    },
+    cli.StringSliceFlag{
+      Name: "p",
+      Usage: "port mapping",
+    },
 	},
 	Action: func(context *cli.Context) error {
 		if len(context.Args()) < 1 {
@@ -80,16 +88,17 @@ var RunCommand = cli.Command{
 		// tty 与 detach 不能共存
 		createTty := context.Bool("ti")
 		detach := context.Bool("d")
+    network := context.String("net")
 
 		// environment
 		envSilice := context.StringSlice("e")
-		logrus.Infof("%s", envSilice[0])
+    portmapping := context.StringSlice("p")
 
 		if createTty && detach {
 			return fmt.Errorf("ti and d paramter can not both provided")
 		}
 		containerName := context.String("name")
-		Run(createTty, cmdArr, resConf, volume, containerName, imageName, envSilice)
+		Run(createTty, cmdArr, resConf, volume, containerName, imageName, envSilice, network, portmapping)
 		return nil
 	},
 }

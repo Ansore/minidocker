@@ -7,6 +7,7 @@ import (
 	"minidocker/cgroups"
 	"minidocker/cgroups/subsystems"
 	"minidocker/container"
+	"minidocker/network"
 	"os"
 	"strconv"
 	"strings"
@@ -33,18 +34,13 @@ func randStringBytes(n int) string {
 	return string(b)
 }
 
-func recordContainerInfo(containerPid int, commandArray []string, containerName string, volume string) (string, error) {
-	// 生成10位数字的容器ID
-	id := randStringBytes(10)
+func recordContainerInfo(containerPid int, commandArray []string, containerName string, containerId string, volume string) (string, error) {
 	// 以当前时间为容器创建时间
 	createTime := time.Now().Format("2006-01-01 14:00:00")
 	command := strings.Join(commandArray, "")
-	if containerName == "" {
-		containerName = id
-	}
 	// 生成容器信息结构体实例
 	containerInfo := &container.ContainerInfo{
-		Id:         id,
+		Id:         containerId,
 		Pid:        strconv.Itoa(containerPid),
 		Command:    command,
 		CreateTime: createTime,
@@ -91,7 +87,11 @@ func deleteContainerInfo(containerId string) {
 	}
 }
 
-func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume string, containerName string, imageName string, envSlice []string) {
+func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume string, containerName string, imageName string, envSlice []string, nw string, portmapping []string) {
+	containerId := randStringBytes(10)
+	if containerName == "" {
+		containerName = containerId
+	}
 	childProcess, writePipe := container.NewParentProcess(tty, containerName, volume, imageName, envSlice)
 	if childProcess == nil {
 		logrus.Errorf("New parent process error")
@@ -100,13 +100,14 @@ func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume s
 	if err := childProcess.Start(); err != nil {
 		logrus.Error(err)
 	}
-	containerName, err := recordContainerInfo(childProcess.Process.Pid, cmdArr, containerName, volume)
+	containerName, err := recordContainerInfo(childProcess.Process.Pid, cmdArr, containerName, containerId, volume)
 	if err != nil {
 		logrus.Errorf("Record container info error %v", err)
 		return
 	}
 
-	cgroupManager := cgroups.NewCgroupManager("minidocker-cgroup")
+	// use containerId as cgroup name
+	cgroupManager := cgroups.NewCgroupManager(containerId)
 	defer cgroupManager.Destroy()
 	if err := cgroupManager.Set(resConf); err != nil {
 		logrus.Errorf("cgroupManager set resConf error %v", err)
@@ -114,6 +115,26 @@ func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume s
 	if err := cgroupManager.Apply(childProcess.Process.Pid); err != nil {
 		logrus.Errorf("cgroupManager Apply childProcess %d error %v", childProcess.Process.Pid, err)
 	}
+
+	containerInfo := &container.ContainerInfo{
+		Id:          containerId,
+		Pid:         strconv.Itoa(childProcess.Process.Pid),
+		Name:        containerName,
+		PortMapping: portmapping,
+	}
+	// network
+	if nw != "" {
+		// config container network
+		if err := network.Init(); err != nil {
+			logrus.Errorf("network init error %v", err)
+		}
+
+		if err := network.Connect(nw, containerInfo); err != nil {
+			logrus.Errorf("error connect network %v", err)
+			return
+		}
+	}
+
 	sendInitCommand(cmdArr, writePipe)
 	if tty {
 		if err := childProcess.Wait(); err != nil {
@@ -121,6 +142,7 @@ func Run(tty bool, cmdArr []string, resConf *subsystems.ResourceConfig, volume s
 		}
 		container.DeleteWorkSpace(volume, containerName)
 		deleteContainerInfo(containerName)
+		network.Disconnect(nw, containerInfo)
 	}
 	os.Exit(0)
 }

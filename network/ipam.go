@@ -141,7 +141,7 @@ func (ipam *IPAM) Allocate(subnet *net.IPNet) (ip net.IP, err error) {
 	if err := ipam.dump(); err != nil {
 		logrus.Errorf("ipam dump error %v", err)
 	}
-	return
+	return ip, nil
 }
 
 // 地址释放
