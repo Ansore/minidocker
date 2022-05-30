@@ -309,14 +309,23 @@ func configPortMapping(ep *Endpoint, _ *container.ContainerInfo) error {
 			logrus.Errorf("port mapping format error, %v", pm)
 			continue
 		}
-		iptablesCmd := fmt.Sprintf("-t nat -A PREROUTING -p tcp -m tcp --dport %s -j DNAT --to-destination %s:%s",
+		iptablesCmd := fmt.Sprintf("-t nat -A PREROUTING -p tcp -m tcp --dport %s -j DNAT --to %s:%s",
 			PortMapping[0], ep.IPAddress.String(), PortMapping[1])
-		cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
-		output, err := cmd.Output()
+		preIptablesCmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
+		output, err := preIptablesCmd.Output()
 		if err != nil {
 			logrus.Errorf("iptables output, %v", output)
 			continue
 		}
+
+		// iptablesCmd = fmt.Sprintf("-t nat -A POSTROUTING -p tcp -m tcp -d %s --dport %s -j MASQUERADE",
+		// 	ep.IPAddress.String(), PortMapping[1])
+		// postIptablesCmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
+		// output, err = postIptablesCmd.Output()
+		// if err != nil {
+		// 	logrus.Errorf("iptables output, %v", output)
+		// 	continue
+		// }
 	}
 	return nil
 }
